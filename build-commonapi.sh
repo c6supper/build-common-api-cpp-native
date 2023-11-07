@@ -48,7 +48,7 @@ try() {
     
     until [ $counter -gt 5 ]
     do
-        $@ || break
+        $@ && break
         ((counter++))
     done
     if [ $counter -gt 5 ]
