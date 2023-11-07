@@ -244,7 +244,7 @@ echo Building Boost
 cd "$BASEDIR" || fail
 # try wget -c https://boostorg.jfrog.io/artifactory/main/release/${BOOST_DL_DIR_VERSION}/source/boost_${BOOST_TAR_VERSION}.tar.gz
 try wget -c https://mirrors.aliyun.com/blfs/conglomeration/boost/boost_${BOOST_TAR_VERSION}.tar.bz2
-try tar -xzf boost_${BOOST_TAR_VERSION}.tar.bz2
+try tar -jxf boost_${BOOST_TAR_VERSION}.tar.bz2
 # OK, so it's now under boost_ and the version in the same way it is written in the *TAR* file
 cd boost_${BOOST_TAR_VERSION} || fail "Expected boost to be in $BOOST_TAR_VERSION/ after unpacking!"
 try ./bootstrap.sh
