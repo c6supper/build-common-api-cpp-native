@@ -344,10 +344,10 @@ esac
 cd src-gen/$versiondir/commonapi || fail
 
 echo Checking if code was generated
-check_expected HelloWorldDBusDeployment.cpp HelloWorldDBusProxy.cpp\
-HelloWorldDBusStubAdapter.cpp HelloWorld.hpp HelloWorldProxy.hpp\
-HelloWorldStubDefault.hpp HelloWorldDBusDeployment.hpp\
-HelloWorldDBusProxy.hpp  HelloWorldDBusStubAdapter.hpp\
+check_expected HelloWorldDBusDeployment.cpp HelloWorldDBusProxy.cpp \
+HelloWorldDBusStubAdapter.cpp HelloWorld.hpp HelloWorldProxy.hpp \
+HelloWorldStubDefault.hpp HelloWorldDBusDeployment.hpp \
+HelloWorldDBusProxy.hpp  HelloWorldDBusStubAdapter.hpp \
 HelloWorldProxyBase.hpp  HelloWorldStubDefault.cpp  HelloWorldStub.hpp
 cd - || fail
 
