@@ -46,7 +46,7 @@ BASEDIR="$PWD"
 try() {
     counter=0
     
-    until [ $counter -gt 5 ]
+    until [ $counter -gt 100 ]
     do
         $@ && break
         ((counter++))
