@@ -20,6 +20,8 @@ else
     QUIET=false
 fi
 
+try_counter=100
+
 # According to web page:
 # "Valid for CommonAPI 3.1.3 and vsomeip 1.3.0"
 
@@ -46,12 +48,14 @@ BASEDIR="$PWD"
 try() {
     counter=0
     
-    until [ $counter -gt 100 ]
+    until [ $counter -gt $try_counter ]
     do
         $@ && break
         ((counter++))
+        sleep 1
+        echo "Command $* failed counter= $counter" ;
     done
-    if [ $counter -gt 5 ]
+    if [ $counter -gt $try_counter ]
     then
         fail "Command $* failed -- check above for details" ;
     fi
