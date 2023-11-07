@@ -15,9 +15,9 @@
 
 # For CI build we can't log every step
 if [ "$QUIET" = "true" ] ; then
-  set +x
+    set +x
 else
-  QUIET=false
+    QUIET=false
 fi
 
 # According to web page:
@@ -43,50 +43,62 @@ MYDIR=$(dirname "$0")
 cd "$MYDIR"
 BASEDIR="$PWD"
 
-try() { $@ || fail "Command $* failed -- check above for details" ;}
+try() {
+    counter=0
+    
+    until [ $counter -gt 5 ]
+    do
+        $@ || break
+        ((counter++))
+    done
+    if [ $counter -gt 5 ]
+    then
+        fail "Command $* failed -- check above for details" ;
+    fi
+}
 
 # Either sudo must exist, or script must run as root
 set +e
 which sudo >/dev/null
 if [ $? -ne 0 ] ; then
-   if [ $(id -u) -ne 0 ] ; then
-      fail "No sudo command exists in your system.  (You could install it (recommended) or run as root instead)"
-      return 1
-   else
-      # Running as root - define sudo as empty
-      sudo=
-   fi
+    if [ $(id -u) -ne 0 ] ; then
+        fail "No sudo command exists in your system.  (You could install it (recommended) or run as root instead)"
+        return 1
+    else
+        # Running as root - define sudo as empty
+        sudo=
+    fi
 else
-   # sudo exists
-   sudo=sudo
+    # sudo exists
+    sudo=sudo
 fi
 set -e
 
 
 fail() {
-   set +x # Turn off command listing now, if it's on
-   echo "FAILED!  Message follows:"
-   echo $@
-   echo "Halted, hit return to continue, or give up..."
-   read x
+    set +x # Turn off command listing now, if it's on
+    echo "FAILED!  Message follows:"
+    echo $@
+    echo "Halted, hit return to continue, or give up..."
+    read x
 }
 
 git_clone() {
-   # This is so we don't fail if directory already exists
-   # but still, if a new clone is attempted and fails, then fail
-   d="$(basename $1)" # repo/directory name
-   d="${d%.git}"      # Strip off ".git" if it is there
-   if [ -d $d ] ; then
-      echo "Directory $d exists, no git clone attempted"
-   else
-      try git clone $1
-   fi
+    # This is so we don't fail if directory already exists
+    # but still, if a new clone is attempted and fails, then fail
+    d="$(basename $1)" # repo/directory name
+    d="${d%.git}"      # Strip off ".git" if it is there
+    if [ -d $d ] ; then
+        echo "Directory $d exists, no git clone attempted"
+    else
+        try git clone $1
+    fi
 }
 
 check_expected() {
-for f in $@ ; do
-   [ -e $f ] || fail "Expected result file $f not present (not built)!"
-done
+    for f in $@ ; do
+        [ -e $f ] || fail "Expected result file $f not present (not built)!"
+    done
 }
 
 check_os(){
@@ -96,59 +108,59 @@ check_os(){
     fgrep -qi ubuntu /etc/os-release && os=ubuntu
     fgrep -qi centos /etc/os-release && os=centos
     fgrep -qi apertis /etc/os-release && os=apertis
- 
+    
     if [[ $os =~ "ubuntu" || $os =~ "debian" || $os =~ "apertis" || $os =~ "centos" || $os =~ "redhat" || $os =~ "fedora" ]] ; then
-      echo "OK, recognized distro as $os ..."
+        echo "OK, recognized distro as $os ..."
     else
-      echo "***"
-      echo "*** WARNING: Unsupported OS/distro.  This might fail later on."
-      echo "***"
+        echo "***"
+        echo "*** WARNING: Unsupported OS/distro.  This might fail later on."
+        echo "***"
     fi
 }
 
 install_prerequisites() {
-  check_os
-
-  java -version || {
-    echo "Java not installed?  (Could not check version)"
-    echo "Please install a Java interpreter (JRE)"
-    echo "This is not done by the script because it would need to force the java version and this may interfere with the system"
-    echo "In addition, the java packages have different names"
-    fail "No java JRE is installed"
-  }
-
-  # This is very rough, but just the bare minimum to support
-  # different distros.  Might be buggy on some, try and see.
-  dnf -v >/dev/null 2>&1 && dnf=true || dnf=false
-  $dnf || yum -v >/dev/null 2>&1 && yum=true || yum=false
-  apt-get -v >/dev/null 2>&1 && apt=true || apt=false
-
-  if [ ! -f .installed_packages ] ; then
-    $dnf && $sudo dnf install -y unzip java-1.8.0-openjdk git make expat-devel cmake gcc gcc-c++ automake autoconf wget pkg-config
-    $yum && $sudo yum install -y unzip java-1.8.0-openjdk git make expat-devel cmake gcc gcc-c++ automake autoconf wget pkg-config
-    $apt && $sudo apt-get update && apt-get install -y unzip openjdk-8-jre git make libexpat1-dev cmake gcc g++ automake autoconf wget pkg-config
-  fi
-  touch .installed_packages
+    check_os
+    
+    java -version || {
+        echo "Java not installed?  (Could not check version)"
+        echo "Please install a Java interpreter (JRE)"
+        echo "This is not done by the script because it would need to force the java version and this may interfere with the system"
+        echo "In addition, the java packages have different names"
+        fail "No java JRE is installed"
+    }
+    
+    # This is very rough, but just the bare minimum to support
+    # different distros.  Might be buggy on some, try and see.
+    dnf -v >/dev/null 2>&1 && dnf=true || dnf=false
+    $dnf || yum -v >/dev/null 2>&1 && yum=true || yum=false
+    apt-get -v >/dev/null 2>&1 && apt=true || apt=false
+    
+    if [ ! -f .installed_packages ] ; then
+        $dnf && $sudo dnf install -y unzip java-1.8.0-openjdk git make expat-devel cmake gcc gcc-c++ automake autoconf wget pkg-config
+        $yum && $sudo yum install -y unzip java-1.8.0-openjdk git make expat-devel cmake gcc gcc-c++ automake autoconf wget pkg-config
+        $apt && $sudo apt-get update && apt-get install -y unzip openjdk-8-jre git make libexpat1-dev cmake gcc g++ automake autoconf wget pkg-config
+    fi
+    touch .installed_packages
 }
 
 apply_patch() {
-  # Use forward to avoid questions if patch had been applied already (second run)
-  # Answer proposed by Tom Hale, reference:
-  # https://stackoverflow.com/questions/21928344/how-to-not-break-the-makefile-if-patch-skips-the-patch
-  if patch -p1 --dry-run --reverse --force < "$1" >/dev/null 2>&1; then
-    echo "Patch already applied - skipping."
-  else # patch not yet applied
-    echo "Patching..."
-    patch -p1 -N < "$1" || echo "Patch failed" >&2 && return 1
-  fi
+    # Use forward to avoid questions if patch had been applied already (second run)
+    # Answer proposed by Tom Hale, reference:
+    # https://stackoverflow.com/questions/21928344/how-to-not-break-the-makefile-if-patch-skips-the-patch
+    if patch -p1 --dry-run --reverse --force < "$1" >/dev/null 2>&1; then
+        echo "Patch already applied - skipping."
+    else # patch not yet applied
+        echo "Patching..."
+        patch -p1 -N < "$1" || echo "Patch failed" >&2 && return 1
+    fi
 }
 
 echo Installing prerequisites
 pause() {
-  if [ -n "$PAUSE" ] ; then
-    echo "paused -- hit return"
-    read x
-  fi
+    if [ -n "$PAUSE" ] ; then
+        echo "paused -- hit return"
+        read x
+    fi
 }
 
 # All artifacts are installed locally within the project tree:
@@ -157,25 +169,25 @@ mkdir -p "$INSTALL_PREFIX"
 
 # Common standard cmake build steps
 cmake_build() {
-  local dir="$1" ; shift
-  cd "$BASEDIR/$dir" || fail "Directory mistake for building $dir"
-  rm -rf build
-  mkdir -p build
-  cd build/ || fail
-  # Common cmake step
-  try cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} $@  \
-        -D CMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
-        -D CMAKE_PREFIX_PATH=${INSTALL_PREFIX}/lib/cmake/ \
-        -D CMAKE_MODULE_PATH=${INSTALL_PREFIX}/lib/cmake/ \
-        ..
-
-  if $QUIET ; then
-    try make -j$(nproc) >/dev/null
-    try make install >/dev/null
-  else
-    try make -j$(nproc)
-    try make install
-  fi
+    local dir="$1" ; shift
+    cd "$BASEDIR/$dir" || fail "Directory mistake for building $dir"
+    rm -rf build
+    mkdir -p build
+    cd build/ || fail
+    # Common cmake step
+    try cmake -DCMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} $@  \
+    -D CMAKE_INSTALL_PREFIX=${INSTALL_PREFIX} \
+    -D CMAKE_PREFIX_PATH=${INSTALL_PREFIX}/lib/cmake/ \
+    -D CMAKE_MODULE_PATH=${INSTALL_PREFIX}/lib/cmake/ \
+    ..
+    
+    if $QUIET ; then
+        try make -j$(nproc) >/dev/null
+        try make install >/dev/null
+    else
+        try make -j$(nproc)
+        try make install
+    fi
 }
 
 install_prerequisites
@@ -204,13 +216,13 @@ apply_patch ../capicxx-dbus-runtime/src/dbus-patches/capi-dbus-add-support-for-c
 apply_patch ../capicxx-dbus-runtime/src/dbus-patches/capi-dbus-correct-dbus-connection-block-pending-call.patch
 set -e
 if $QUIET ; then
-  try ./configure --prefix=${INSTALL_PREFIX} --without-systemdsystemunitdir >/dev/null
-  try make -j$(nproc) >/dev/null
-  try make install >/dev/null
+    try ./configure --prefix=${INSTALL_PREFIX} --without-systemdsystemunitdir >/dev/null
+    try make -j$(nproc) >/dev/null
+    try make install >/dev/null
 else
-  try ./configure --prefix=${INSTALL_PREFIX} --without-systemdsystemunitdir
-  try make -j$(nproc)
-  try make install
+    try ./configure --prefix=${INSTALL_PREFIX} --without-systemdsystemunitdir
+    try make -j$(nproc)
+    try make install
 fi
 
 check_expected dbus/.libs/libdbus-1.so.3
@@ -230,7 +242,7 @@ check_expected $BASEDIR/install/lib/libCommonAPI-DBus.so
 # Build Boost
 echo Building Boost
 cd "$BASEDIR" || fail
-try wget -c https://dl.bintray.com/boostorg/release/${BOOST_DL_DIR_VERSION}/source/boost_${BOOST_TAR_VERSION}.tar.gz
+try wget -c https://boostorg.jfrog.io/artifactory/main/release/${BOOST_DL_DIR_VERSION}/source/boost_${BOOST_TAR_VERSION}.tar.gz
 try tar -xzf boost_${BOOST_TAR_VERSION}.tar.gz
 # OK, so it's now under boost_ and the version in the same way it is written in the *TAR* file
 cd boost_${BOOST_TAR_VERSION} || fail "Expected boost to be in $BOOST_TAR_VERSION/ after unpacking!"
@@ -238,9 +250,9 @@ try ./bootstrap.sh
 BOOST_ROOT=`realpath $PWD/../install`
 mkdir -p $BOOST_ROOT
 if $QUIET ; then
-  try ./b2 -d+2 --prefix=$BOOST_ROOT link=shared threading=multi toolset=gcc -j$(nproc) install >/dev/null
+    try ./b2 -d+2 --prefix=$BOOST_ROOT link=shared threading=multi toolset=gcc -j$(nproc) install >/dev/null
 else
-  try ./b2 -d+2 --prefix=$BOOST_ROOT link=shared threading=multi toolset=gcc -j$(nproc) install
+    try ./b2 -d+2 --prefix=$BOOST_ROOT link=shared threading=multi toolset=gcc -j$(nproc) install
 fi
 
 # Build vsomeip
@@ -312,15 +324,15 @@ try ./cgen/commonapi_someip_generator/commonapi-someip-generator-linux-$ARCH ./f
 
 # Dirname for generated filesseems to have changed...
 case $PATCHVERSION in
-  3.1.3)
-    versiondir=v1_0
+    3.1.3)
+        versiondir=v1_0
     ;;
-  3.1.5p2)
-    versiondir=v1
+    3.1.5p2)
+        versiondir=v1
     ;;
-  *)
-    # Assuming it won't change from now on...
-    versiondir=v1
+    *)
+        # Assuming it won't change from now on...
+        versiondir=v1
     ;;
 esac
 
@@ -328,10 +340,10 @@ cd src-gen/$versiondir/commonapi || fail
 
 echo Checking if code was generated
 check_expected HelloWorldDBusDeployment.cpp HelloWorldDBusProxy.cpp\
-      HelloWorldDBusStubAdapter.cpp HelloWorld.hpp HelloWorldProxy.hpp\
-      HelloWorldStubDefault.hpp HelloWorldDBusDeployment.hpp\
-      HelloWorldDBusProxy.hpp  HelloWorldDBusStubAdapter.hpp\
-      HelloWorldProxyBase.hpp  HelloWorldStubDefault.cpp  HelloWorldStub.hpp
+HelloWorldDBusStubAdapter.cpp HelloWorld.hpp HelloWorldProxy.hpp\
+HelloWorldStubDefault.hpp HelloWorldDBusDeployment.hpp\
+HelloWorldDBusProxy.hpp  HelloWorldDBusStubAdapter.hpp\
+HelloWorldProxyBase.hpp  HelloWorldStubDefault.cpp  HelloWorldStub.hpp
 cd - || fail
 
 #If everything worked, the generated code will be in the new directory src-gen. The option -sk generates a default implementation of your interface instance in the service.
