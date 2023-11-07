@@ -76,7 +76,9 @@ else
     # sudo exists
     sudo=sudo
 fi
-set -e
+
+# will retry instead of exiting
+# set -e
 
 
 fail() {
